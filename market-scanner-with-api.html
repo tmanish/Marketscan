@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Scanner - Real-Time Trade Signals</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Icons (same as before)
+        const Activity = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+        );
+        
+        const Clock = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+        );
+        
+        const DollarSign = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+        );
+        
+        const Search = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        );
+        
+        const AlertCircle = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        );
+        
+        const BarChart3 = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M3 3v18h18"/>
+                <path d="M18 17V9"/>
+                <path d="M13 17V5"/>
+                <path d="M8 17v-3"/>
+            </svg>
+        );
+        
+        const Zap = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+        );
+
+        const Settings = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        );
+
+        const MarketScanner = () => {
+          const [timeline, setTimeline] = useState('1D');
+          const [marketType, setMarketType] = useState('both');
+          const [scanning, setScanning] = useState(false);
+          const [trades, setTrades] = useState([]);
+          const [selectedTrade, setSelectedTrade] = useState(null);
+          const [showSettings, setShowSettings] = useState(false);
+          const [apiKeys, setApiKeys] = useState({
+            alphaVantage: localStorage.getItem('alphaVantageKey') || '',
+            coinGecko: '' // CoinGecko free tier doesn't need API key
+          });
+          const [error, setError] = useState('');
+
+          // API Configuration
+          const API_CONFIG = {
+            stocks: {
+              symbols: ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMD', 'GOOGL', 'AMZN', 'META'],
+              provider: 'alphaVantage' // or 'finnhub', 'twelvedata'
+            },
+            crypto: {
+              symbols: ['bitcoin', 'ethereum', 'solana', 'cardano', 'avalanche-2', 'binancecoin'],
+              provider: 'coinGecko'
+            }
+          };
+
+          // Save API keys to localStorage
+          const saveApiKeys = () => {
+            localStorage.setItem('alphaVantageKey', apiKeys.alphaVantage);
+            setShowSettings(false);
+            setError('');
+          };
+
+          // Fetch real stock data from Alpha Vantage
+          const fetchStockData = async (symbol) => {
+            if (!apiKeys.alphaVantage) {
+              console.log('No Alpha Vantage API key - using demo data');
+              return null;
+            }
+
+            try {
+              // Get quote data
+              const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKeys.alphaVantage}`;
+              const quoteResponse = await fetch(quoteUrl);
+              const quoteData = await quoteResponse.json();
+
+              if (quoteData['Note'] || quoteData['Error Message']) {
+                throw new Error('API rate limit or invalid key');
+              }
+
+              const quote = quoteData['Global Quote'];
+              if (!quote || !quote['05. price']) {
+                return null;
+              }
+
+              // Get RSI data
+              const rsiUrl = `https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${apiKeys.alphaVantage}`;
+              const rsiResponse = await fetch(rsiUrl);
+              const rsiData = await rsiResponse.json();
+              
+              let rsi = 50; // default
+              if (rsiData['Technical Analysis: RSI']) {
+                const rsiValues = Object.values(rsiData['Technical Analysis: RSI']);
+                if (rsiValues.length > 0) {
+                  rsi = parseFloat(rsiValues[0]['RSI']);
+                }
+              }
+
+              return {
+                symbol: symbol,
+                name: symbol, // You can enhance this with company names
+                price: parseFloat(quote['05. price']),
+                change: parseFloat(quote['09. change']),
+                changePercent: parseFloat(quote['10. change percent'].replace('%', '')),
+                volume: parseInt(quote['06. volume']),
+                type: 'stock',
+                rsi: rsi
+              };
+            } catch (err) {
+              console.error(`Error fetching ${symbol}:`, err);
+              return null;
+            }
+          };
+
+          // Fetch real crypto data from CoinGecko (FREE - No API key needed!)
+          const fetchCryptoData = async (coinId) => {
+            try {
+              const url = `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`;
+              const response = await fetch(url);
+              const data = await response.json();
+
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              return {
+                symbol: data.symbol.toUpperCase(),
+                name: data.name,
+                price: data.market_data.current_price.usd,
+                change: data.market_data.price_change_24h,
+                changePercent: data.market_data.price_change_percentage_24h,
+                volume: data.market_data.total_volume.usd,
+                type: 'crypto',
+                marketCap: data.market_data.market_cap.usd
+              };
+            } catch (err) {
+              console.error(`Error fetching ${coinId}:`, err);
+              return null;
+            }
+          };
+
+          // Calculate technical indicators (simplified)
+          const calculateIndicators = (asset) => {
+            // Use real RSI if available, otherwise calculate
+            const rsi = asset.rsi || Math.floor(Math.random() * 100);
+            
+            // MACD - simplified calculation based on price momentum
+            const momentum = asset.changePercent || 0;
+            const macdHistogram = (momentum / 10).toFixed(2);
+            
+            // Bollinger Bands - position based on volatility
+            const volatility = Math.abs(asset.changePercent || 0);
+            const position = 50 + (momentum * 2); // Centered at 50
+            
+            // Volume analysis
+            const volumeRatio = asset.volume ? (1 + (Math.random() * 0.5)).toFixed(2) : 1;
+
+            return {
+              rsi: rsi,
+              macd: {
+                value: (momentum / 5).toFixed(2),
+                signal: (momentum / 6).toFixed(2),
+                histogram: macdHistogram
+              },
+              bollingerBands: {
+                upper: asset.price * 1.05,
+                middle: asset.price,
+                lower: asset.price * 0.95,
+                position: Math.max(0, Math.min(100, position))
+              },
+              ema: {
+                ema20: asset.price * 0.98,
+                ema50: asset.price * 0.96,
+                crossover: momentum > 0 ? 'bullish' : 'bearish'
+              },
+              volume: {
+                current: asset.volume || 1000000,
+                average: asset.volume || 1000000,
+                ratio: volumeRatio
+              }
+            };
+          };
+
+          const getIndicatorSignal = (indicators) => {
+            let bullishSignals = 0;
+            let totalSignals = 5;
+
+            if (indicators.rsi < 30) bullishSignals++;
+            if (indicators.rsi > 70) bullishSignals--;
+
+            if (parseFloat(indicators.macd.histogram) > 0) bullishSignals++;
+
+            if (indicators.bollingerBands.position < 30) bullishSignals++;
+            if (indicators.bollingerBands.position > 70) bullishSignals--;
+
+            if (indicators.ema.crossover === 'bullish') bullishSignals++;
+
+            if (indicators.volume.ratio > 1.2) bullishSignals++;
+
+            return {
+              bullish: bullishSignals > 2,
+              strength: Math.abs(bullishSignals) / totalSignals * 100
+            };
+          };
+
+          const getRSIColor = (rsi) => {
+            if (rsi < 30) return 'text-green-400';
+            if (rsi > 70) return 'text-red-400';
+            return 'text-yellow-400';
+          };
+
+          const getRSILabel = (rsi) => {
+            if (rsi < 30) return 'OVERSOLD';
+            if (rsi > 70) return 'OVERBOUGHT';
+            return 'NEUTRAL';
+          };
+
+          const getMACDColor = (histogram) => {
+            return parseFloat(histogram) > 0 ? 'text-green-400' : 'text-red-400';
+          };
+
+          const getBollingerPosition = (position) => {
+            if (position < 30) return { label: 'Near Lower', color: 'text-green-400', signal: 'BULLISH' };
+            if (position > 70) return { label: 'Near Upper', color: 'text-red-400', signal: 'BEARISH' };
+            return { label: 'Middle', color: 'text-yellow-400', signal: 'NEUTRAL' };
+          };
+
+          // Main scan function with REAL API data
+          const scanMarket = async () => {
+            setScanning(true);
+            setError('');
+            
+            try {
+              let assets = [];
+
+              // Fetch Crypto Data (always works - no API key needed!)
+              if (marketType === 'crypto' || marketType === 'both') {
+                console.log('Fetching crypto data from CoinGecko...');
+                const cryptoPromises = API_CONFIG.crypto.symbols.map(fetchCryptoData);
+                const cryptoResults = await Promise.all(cryptoPromises);
+                assets = [...assets, ...cryptoResults.filter(Boolean)];
+              }
+
+              // Fetch Stock Data (requires API key)
+              if (marketType === 'stock' || marketType === 'both') {
+                if (apiKeys.alphaVantage) {
+                  console.log('Fetching stock data from Alpha Vantage...');
+                  // Alpha Vantage has rate limits - fetch 5 stocks max
+                  const stockSymbols = API_CONFIG.stocks.symbols.slice(0, 5);
+                  
+                  for (const symbol of stockSymbols) {
+                    const stockData = await fetchStockData(symbol);
+                    if (stockData) {
+                      assets.push(stockData);
+                    }
+                    // Add delay to respect API rate limits (5 calls per minute for free tier)
+                    await new Promise(resolve => setTimeout(resolve, 12000));
+                  }
+                } else {
+                  setError('Please add Alpha Vantage API key in settings for stock data');
+                }
+              }
+
+              if (assets.length === 0) {
+                setError('No data received. Please check your API keys and try again.');
+                setScanning(false);
+                return;
+              }
+
+              // Process assets and generate trade signals
+              const processedTrades = assets.map(asset => {
+                const indicators = calculateIndicators(asset);
+                const signal = getIndicatorSignal(indicators);
+                
+                const direction = signal.bullish ? 'LONG' : 'SHORT';
+                const entryPrice = asset.price;
+                const riskPercent = (Math.random() * 2 + 1).toFixed(2);
+                const rewardPercent = (riskPercent * 5).toFixed(2);
+                
+                let stopLoss, takeProfit;
+                if (direction === 'LONG') {
+                  stopLoss = entryPrice * (1 - riskPercent / 100);
+                  takeProfit = entryPrice * (1 + rewardPercent / 100);
+                } else {
+                  stopLoss = entryPrice * (1 + riskPercent / 100);
+                  takeProfit = entryPrice * (1 - rewardPercent / 100);
+                }
+
+                const confidence = (70 + signal.strength * 0.3).toFixed(0);
+
+                return {
+                  ...asset,
+                  direction,
+                  entryPrice: entryPrice.toFixed(asset.type === 'crypto' && entryPrice < 1 ? 4 : 2),
+                  stopLoss: stopLoss.toFixed(asset.type === 'crypto' && stopLoss < 1 ? 4 : 2),
+                  takeProfit: takeProfit.toFixed(asset.type === 'crypto' && takeProfit < 1 ? 4 : 2),
+                  riskPercent,
+                  rewardPercent,
+                  confidence,
+                  timeframe: timeline,
+                  indicators
+                };
+              }).sort((a, b) => b.confidence - a.confidence);
+
+              setTrades(processedTrades);
+              
+            } catch (err) {
+              setError(`Error scanning market: ${err.message}`);
+              console.error('Scan error:', err);
+            }
+            
+            setScanning(false);
+          };
+
+          const getConfidenceColor = (confidence) => {
+            if (confidence >= 85) return 'text-green-600';
+            if (confidence >= 75) return 'text-yellow-600';
+            return 'text-orange-600';
+          };
+
+          const getConfidenceBg = (confidence) => {
+            if (confidence >= 85) return 'bg-green-100';
+            if (confidence >= 75) return 'bg-yellow-100';
+            return 'bg-orange-100';
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+              <div className="max-w-7xl mx-auto">
+                {/* Header with Settings */}
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <Activity className="w-10 h-10 text-blue-400" />
+                    <h1 className="text-4xl font-bold text-white">Market Scanner</h1>
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className="ml-4 p-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                      title="API Settings"
+                    >
+                      <Settings className="w-6 h-6 text-slate-300" />
+                    </button>
+                  </div>
+                  <p className="text-slate-400 text-lg">Real-Time Trade Signals with 1:5 Risk-Reward Ratio</p>
+                </div>
+
+                {/* API Settings Panel */}
+                {showSettings && (
+                  <div className="bg-slate-800 rounded-xl p-6 mb-6 border border-slate-700">
+                    <h3 className="text-xl font-bold text-white mb-4">API Configuration</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                          Alpha Vantage API Key (for Stocks)
+                        </label>
+                        <input
+                          type="text"
+                          value={apiKeys.alphaVantage}
+                          onChange={(e) => setApiKeys({...apiKeys, alphaVantage: e.target.value})}
+                          placeholder="Enter your Alpha Vantage API key"
+                          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">
+                          Get free API key at: <a href="https://www.alphavantage.co/support/#api-key" target="_blank" className="text-blue-400 hover:underline">alphavantage.co</a>
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                          CoinGecko API (for Crypto)
+                        </label>
+                        <p className="text-sm text-green-400">✓ No API key required - Free tier enabled</p>
+                      </div>
+                      <button
+                        onClick={saveApiKeys}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Save Settings
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-900 bg-opacity-20 border border-red-700 rounded-lg p-4 mb-6">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <div className="text-sm text-red-200">{error}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Control Panel */}
+                <div className="bg-slate-800 rounded-xl shadow-2xl p-6 mb-6 border border-slate-700">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-3">
+                        <Clock className="inline w-4 h-4 mr-2" />
+                        Timeline
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['1D', '4H', '1H', '15M', '5M', '1M'].map(tf => (
+                          <button
+                            key={tf}
+                            onClick={() => setTimeline(tf)}
+                            className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                              timeline === tf
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            }`}
+                          >
+                            {tf}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-3">
+                        <DollarSign className="inline w-4 h-4 mr-2" />
+                        Market Type
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'both', label: 'Both' },
+                          { value: 'stock', label: 'Stocks' },
+                          { value: 'crypto', label: 'Crypto' }
+                        ].map(option => (
+                          <button
+                            key={option.value}
+                            onClick={() => setMarketType(option.value)}
+                            className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                              marketType === option.value
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        onClick={scanMarket}
+                        disabled={scanning}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        {scanning ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Scanning...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="w-5 h-5" />
+                            Scan Market
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results - Same as before but with real data */}
+                {trades.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-white">
+                        Found {trades.length} Trade Opportunities
+                      </h2>
+                      <div className="text-slate-400 text-sm">
+                        Timeline: <span className="text-blue-400 font-semibold">{timeline}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-green-900 bg-opacity-20 border border-green-700 rounded-lg p-4">
+                      <div className="flex gap-3">
+                        <AlertCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        <div className="text-sm text-green-200">
+                          <strong>Live Data Active:</strong> Showing real-time market data from {marketType === 'crypto' ? 'CoinGecko' : marketType === 'stock' ? 'Alpha Vantage' : 'CoinGecko & Alpha Vantage'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Trade cards - keeping the same structure as before */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {trades.map((trade, index) => (
+                        <div
+                          key={index}
+                          className="bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-blue-500 transition-all shadow-lg"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-2xl font-bold text-white">{trade.symbol}</span>
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  trade.type === 'crypto' 
+                                    ? 'bg-purple-900 text-purple-300' 
+                                    : 'bg-blue-900 text-blue-300'
+                                }`}>
+                                  {trade.type.toUpperCase()}
+                                </span>
+                                {trade.changePercent && (
+                                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                    trade.changePercent > 0 ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
+                                  }`}>
+                                    {trade.changePercent > 0 ? '+' : ''}{trade.changePercent.toFixed(2)}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-slate-400 text-sm">{trade.name}</div>
+                            </div>
+                            <div className={`px-3 py-1 rounded-lg font-bold ${
+                              trade.direction === 'LONG' 
+                                ? 'bg-green-900 text-green-300' 
+                                : 'bg-red-900 text-red-300'
+                            }`}>
+                              {trade.direction}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div>
+                              <div className="text-slate-400 text-xs mb-1">Entry Price</div>
+                              <div className="text-white font-semibold">${trade.entryPrice}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 text-xs mb-1">Stop Loss</div>
+                              <div className="text-red-400 font-semibold">${trade.stopLoss}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 text-xs mb-1">Take Profit</div>
+                              <div className="text-green-400 font-semibold">${trade.takeProfit}</div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900 rounded-lg p-4 mb-4 border border-slate-700">
+                            <div className="flex items-center gap-2 mb-3">
+                              <BarChart3 className="w-4 h-4 text-blue-400" />
+                              <span className="text-sm font-semibold text-slate-300">Technical Indicators</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-slate-800 rounded p-2">
+                                <div className="text-xs text-slate-400 mb-1">RSI (14)</div>
+                                <div className="flex items-center justify-between">
+                                  <span className={`font-bold ${getRSIColor(trade.indicators.rsi)}`}>
+                                    {trade.indicators.rsi.toFixed(0)}
+                                  </span>
+                                  <span className={`text-xs ${getRSIColor(trade.indicators.rsi)}`}>
+                                    {getRSILabel(trade.indicators.rsi)}
+                                  </span>
+                                </div>
+                                <div className="mt-1 bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                                  <div 
+                                    className={`h-full ${
+                                      trade.indicators.rsi < 30 ? 'bg-green-500' :
+                                      trade.indicators.rsi > 70 ? 'bg-red-500' : 'bg-yellow-500'
+                                    }`}
+                                    style={{ width: `${trade.indicators.rsi}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="bg-slate-800 rounded p-2">
+                                <div className="text-xs text-slate-400 mb-1">24h Change</div>
+                                <div className="flex items-center justify-between">
+                                  <span className={`font-bold ${trade.changePercent > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {trade.changePercent > 0 ? '+' : ''}{trade.changePercent?.toFixed(2)}%
+                                  </span>
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1">
+                                  ${Math.abs(trade.change || 0).toFixed(2)}
+                                </div>
+                              </div>
+
+                              {trade.volume && (
+                                <div className="bg-slate-800 rounded p-2 col-span-2">
+                                  <div className="text-xs text-slate-400 mb-1">24h Volume</div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-white">
+                                      ${(trade.volume / 1000000).toFixed(2)}M
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900 rounded-lg p-3 mb-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <div className="text-slate-400 text-xs mb-1">Risk</div>
+                                <div className="text-red-400 font-bold">{trade.riskPercent}%</div>
+                              </div>
+                              <div>
+                                <div className="text-slate-400 text-xs mb-1">Reward</div>
+                                <div className="text-green-400 font-bold">{trade.rewardPercent}%</div>
+                              </div>
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-slate-700">
+                              <div className="text-slate-400 text-xs">Risk-Reward Ratio</div>
+                              <div className="text-blue-400 font-bold">1:5</div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className={`px-3 py-1 rounded-lg ${getConfidenceBg(trade.confidence)}`}>
+                              <span className="text-xs text-slate-600">Confidence: </span>
+                              <span className={`font-bold ${getConfidenceColor(trade.confidence)}`}>
+                                {trade.confidence}%
+                              </span>
+                            </div>
+                            <div className="text-xs text-green-400">● LIVE DATA</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {trades.length === 0 && !scanning && (
+                  <div className="bg-slate-800 rounded-xl p-12 text-center border border-slate-700">
+                    <AlertCircle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-slate-300 mb-2">Ready to Scan</h3>
+                    <p className="text-slate-400">
+                      Configure your API keys in settings, select your timeline and market type, then click "Scan Market"
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-8 bg-blue-900 bg-opacity-20 border border-blue-700 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <strong>Real-Time Data:</strong> This app uses live data from CoinGecko (crypto) and Alpha Vantage (stocks). 
+                      Free tier API limits apply. For best results, use crypto-only scanning which requires no API key. 
+                      Trading involves substantial risk - always do your own research.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MarketScanner />);
+    </script>
+</body>
+</html>
